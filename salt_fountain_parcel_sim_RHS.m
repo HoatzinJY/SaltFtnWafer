@@ -15,6 +15,7 @@ function f=salt_fountain_parcel_sim_RHS(t,y)
 
 global k_th dx r beta_s alpha_t T_b S_b S_p z_b do_pump
 
+%gives temp and salinity of environment surrounding plug
 T_i=interp1(z_b,T_b,y(1));
 S_i=interp1(z_b,S_b,y(1));
 

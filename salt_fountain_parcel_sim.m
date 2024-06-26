@@ -4,9 +4,10 @@
 
 %fasttrack paramters
 my_pipe_length = 200; %m
-my_pipe_radius = 0.5; %m
+my_pipe_radius = 1; %m
+my_distance_raised = 80; %m
 my_max_time_post_pump = 100; %days, to stop infinite recursion
-my_distance_raised = 10; %m
+
 
 %start of normal file
 
@@ -117,7 +118,7 @@ t_sf=my_max_time_post_pump*86400; %duration salt fountain is integrated after pu
 % run in two stages: pump on and pump off
 for ii=1:2 % ii=1, pump is on, ii=2, pump is off
 
-    ii
+    ii;
     
     %specify the properties of the salt fountain that will be passed into the
     %ODE solver
@@ -140,8 +141,10 @@ for ii=1:2 % ii=1, pump is on, ii=2, pump is off
     Kg=find(z_grd>=z_mybot & z_grd<z_mytop);
     pres=sw_pres(-z_grd,lat_p);
     
-    alpha_t=mean(sw_alpha(S_grd(Kg),T_grd(Kg),pres(Kg),'temp'));
-    beta_s=mean(sw_beta(S_grd(Kg),T_grd(Kg),pres(Kg),'temp'));
+    myAlpha_t = mean(sw_alpha(S_grd(Kg),T_grd(Kg),pres(Kg),'temp'));
+    myBeta_s = mean(sw_beta(S_grd(Kg),T_grd(Kg),pres(Kg),'temp'));
+    alpha_t= myAlpha_t;
+    beta_s= myBeta_s;
     
     if ii==1 %pump on
     do_pump=1; %if do_pump=1, the RHS of the vertical velocity equation will be 
@@ -151,8 +154,9 @@ for ii=1:2 % ii=1, pump is on, ii=2, pump is off
     else %pump off 
         do_pump=0;
     end
-               
-    S_p=S_b(Kg(1)); %the salinity of the plug of water which is conserved
+    
+    plug_salinity = S_b(Kg(1));
+    S_p=plug_salinity; %the salinity of the plug of water which is conserved
     
     % set initial conditions during pumping phase to be as measured in water column
     % at base of pipe
@@ -215,5 +219,29 @@ plot(t_total/86400,plug_var_total(:,3))
 xlabel('Time (in days)')
 ylabel('Temperature (C)')
 grid on
+%changes some units from seconds to days 
+
+%display important information about parcel end
+end_time = stop_time/86400 ;
+end_time_display = strcat(num2str(end_time),' days to reach top after pump period');
+end_velocity = stop_plug_var(2);
+end_velocity_display = strcat(num2str(end_velocity),' velocity in m/s at the top');
+end_temperature = stop_plug_var(3);
+end_enviroment_temp = interp1(z_grd, T_grd, z_mytop);
+end_temperature_display = strcat(num2str(end_temperature),' C in plug ', num2str(end_enviroment_temp), ' C in enviroment ', num2str(end_temperature - end_enviroment_temp), ' C difference' );
+end_salinity = plug_salinity;
+end_enviroment_salinity = interp1(z_grd, S_grd, z_mytop);
+end_salinity_display = strcat(num2str(end_salinity),' ppt in plug ', num2str(end_enviroment_salinity), ' ppt in enviroment ', num2str(end_salinity - end_enviroment_salinity), ' ppt difference' );
+end_density_difference = (myBeta_s*(end_salinity-end_enviroment_salinity)-myAlpha_t*(end_temperature - end_enviroment_temp));
+end_density_display = strcat(num2str(end_density_difference), ' kg/m^3 density difference plug - surroundings');
+disp(end_time_display)
+disp(end_velocity_display)
+disp(end_temperature_display)
+disp(end_salinity_display)
+disp(end_density_display)
+
+
+
+
 
 
