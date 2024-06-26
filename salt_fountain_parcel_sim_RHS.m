@@ -13,6 +13,8 @@ function f=salt_fountain_parcel_sim_RHS(t,y)
 % f(3)=DT_p/Dt=2*k_th*(T_b-T_p)/(dx*r*rho_o*c_p), change do to heat flux
 % through side of pipe
 
+
+
 global k_th dx r beta_s alpha_t T_b S_b S_p z_b do_pump
 
 %gives temp and salinity of environment surrounding plug

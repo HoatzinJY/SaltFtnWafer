@@ -209,17 +209,40 @@ end
 %second set of plots of pipe conditions vs time (in days)
 %plug_var_total has column 1 is depth, 2 is velocity, 3 is temperature 
 figure
-subplot(2,1,1)
+subplot(4,1,1) 
 plot(t_total/86400,plug_var_total(:,1))
 xlabel('Time (in days)')
 ylabel('Depth of Parcel(m)')
 grid on
-subplot(2,1,2)
+subplot(4,1,2)
 plot(t_total/86400,plug_var_total(:,3))
 xlabel('Time (in days)')
 ylabel('Temperature (C)')
 grid on
-%changes some units from seconds to days 
+subplot(4, 1, 3)
+for depthIndex = 1:size(plug_var_total, 1)
+    %column 4 is enviroment temp
+    plug_var_total(depthIndex, 4) = interp1(z_grd, T_grd, plug_var_total(depthIndex, 1));
+    %column 5 is enviroment salinity
+    plug_var_total(depthIndex, 5) = interp1(z_grd, S_grd, plug_var_total(depthIndex, 1));
+    %column 6 is density difference of plug - surroundings 
+    plug_var_total(depthIndex, 6) = myBeta_s*(plug_salinity-plug_var_total(depthIndex,5))-myAlpha_t*(plug_var_total(depthIndex,3) - plug_var_total(depthIndex,4));
+    %column 7 is density difference, averaged over some time
+    averageOver = 200;
+    if(depthIndex > averageOver)
+        plug_var_total(depthIndex, 7) = mean(plug_var_total((depthIndex-averageOver):depthIndex, 6));
+    end
+end 
+plot(t_total/86400, plug_var_total(:,6))
+xlabel('Time (in days)')
+ylabel('Density Difference plug-surroundings (kg/m^3)')
+grid on
+subplot (4, 1, 4)
+plot(t_total/86400, plug_var_total(:,7))
+xlabel('Time (in days)')
+ylabel('Density Difference plug-surroundings (kg/m^3), averaged over some duration')
+grid on
+
 
 %display important information about parcel end
 end_time = stop_time/86400 ;
