@@ -5,7 +5,7 @@
 %fasttrack paramters
 my_pipe_length = 200; %m
 my_pipe_radius = 0.5; %m
-my_time_post_pump = 5; %days
+my_max_time_post_pump = 100; %days, to stop infinite recursion
 my_distance_raised = 10; %m
 
 %start of normal file
@@ -58,8 +58,8 @@ S = double(squeeze(ncread(fnameS,'s_an',[Ip Jp 1 1],[1 1 Inf Inf])));
 
 % top and bottom of the salt fountain
 % PARAM: salt fountain height
-z_top=-100;
-z_bot= z_top - my_pipe_length;
+z_mytop=-100;
+z_mybot= z_mytop - my_pipe_length;
 % z_bot=-300;
 
 % this following section plots the temperature and salinity profiles of
@@ -69,10 +69,10 @@ subplot(1,2,1)
 plot(T,-depth)
 aa=axis;
 hold on
-plot([aa(1) aa(2)],z_bot*[1 1],'k--');
+plot([aa(1) aa(2)],z_mybot*[1 1],'k--');
 aa=axis;
 hold on
-plot([aa(1) aa(2)],z_top*[1 1],'k--');
+plot([aa(1) aa(2)],z_mytop*[1 1],'k--');
 axis(aa);
 grid on
 xlabel('T (C)');
@@ -82,10 +82,10 @@ subplot(1,2,2)
 plot(S,-depth)
 aa=axis;
 hold on
-plot([aa(1) aa(2)],z_bot*[1 1],'k--');
+plot([aa(1) aa(2)],z_mybot*[1 1],'k--');
 aa=axis;
 hold on
-plot([aa(1) aa(2)],z_top*[1 1],'k--');
+plot([aa(1) aa(2)],z_mytop*[1 1],'k--');
 axis(aa);
 grid on
 set(gca,'fontsize',14);
@@ -96,7 +96,7 @@ xlabel('S (psu)');
 %PARAM: domain grid 
 dz=1; %in meters
 H=500;
-if H<-z_bot
+if H<-z_mybot
     display('the depth of the grid must be deeper than the depth of the pipe!')
    return 
 end
@@ -112,7 +112,7 @@ t_pump = (my_distance_raised/w_pump) * 86400;%sets pump duration based on desire
 w_pump=w_pump/86400; %convert to meters per second
 %t_pump=4*86400; %duration pump is on
 %PARAM: time that salt fountain runs for after perturbation
-t_sf=my_time_post_pump*86400; %duration salt fountain is integrated after pump is turned off
+t_sf=my_max_time_post_pump*86400; %duration salt fountain is integrated after pump is turned off
 
 % run in two stages: pump on and pump off
 for ii=1:2 % ii=1, pump is on, ii=2, pump is off
@@ -122,7 +122,7 @@ for ii=1:2 % ii=1, pump is on, ii=2, pump is off
     %specify the properties of the salt fountain that will be passed into the
     %ODE solver
     
-    global k_th dx r beta_s alpha_t T_b S_b S_p z_b do_pump
+    global k_th dx r beta_s alpha_t T_b S_b S_p z_b do_pump z_top
     
     %PARAM: various pipe parameters
     k_th=0.15; %thermal conductivity in W/m/K in this case for PVC
@@ -132,11 +132,12 @@ for ii=1:2 % ii=1, pump is on, ii=2, pump is off
     T_b=T_grd; %background temperature profile
     S_b=S_grd; %background salinity profile
     z_b=z_grd; %vertical coordinate of background T, S profile
+    z_top = z_mytop; %depth @ top of pipe
     
     %calculate the value of the haline contraction coefficient and
     %thermal expansion coefficient averaged over the length of the fountain
     
-    Kg=find(z_grd>=z_bot & z_grd<z_top);
+    Kg=find(z_grd>=z_mybot & z_grd<z_mytop);
     pres=sw_pres(-z_grd,lat_p);
     
     alpha_t=mean(sw_alpha(S_grd(Kg),T_grd(Kg),pres(Kg),'temp'));
@@ -177,8 +178,11 @@ for ii=1:2 % ii=1, pump is on, ii=2, pump is off
     ics=ics(:);
     
     %this is the ode solver (4th-5th order), ode45 
+    %sets an event for solver to stop once parcel reaches top
+    stopEvent = odeset('Events', @topEvent);
     %PARAM: time step --> automatically determined by solver 
-    [t,plug_var]=ode45('salt_fountain_parcel_sim_RHS',tspan,ics);
+    [t,plug_var, stop_time, stop_plug_var, stop_indices]= ...
+        ode45(@salt_fountain_parcel_sim_RHS,tspan,ics,stopEvent);
     
     %sets imaginary surface boundary
     Ib=find(plug_var(:,1)>0); 
