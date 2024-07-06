@@ -22,10 +22,14 @@ S_i=interp1(z_b,S_b,y(1));
 nu=1e-6; %molecular kinematic viscosity of water [m^2/s]
 
 % first ode for dz/dt - vertical velocity
-f(1)=y(2);
+if do_pump == -1
+    f(1) = 0; %stops all motion at end of pumping stage --> to be like perturbation
+else
+    f(1)=y(2);
+end
 
 %second ode for dw/dt - vertical acceleration 
-if do_pump
+if do_pump == 1 || do_pump == -1
     f(2)=0;
 else
 f(2)=-9.8*(beta_s*(S_p-S_i)-alpha_t*(y(3)-T_i))-8*nu*y(2)/(r^2);

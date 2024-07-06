@@ -3,9 +3,9 @@
 % as it travels up the pipe 
 
 %fasttrack paramters
-my_pipe_length = 200; %m
-my_pipe_radius = 1; %m
-my_distance_raised = 80; %m
+my_pipe_length = 10; %m
+my_pipe_radius = 0.5; %m
+my_distance_raised = 3; %m
 my_max_time_post_pump = 100; %days, to stop infinite recursion
 
 
@@ -109,14 +109,14 @@ S_grd=interp1(-depth,S,z_grd);
 %all final time values in seconds
 %PARAM: amount of perturbation
 w_pump=20; %in meters per day
-t_pump = (my_distance_raised/w_pump) * 86400;%sets pump duration based on desired perturbation @ fixed Vw
+t_pump = (my_distance_raised/w_pump) * 86400;%sets pump duration in seconds based on desired perturbation @ fixed Vw
 w_pump=w_pump/86400; %convert to meters per second
 %t_pump=4*86400; %duration pump is on
 %PARAM: time that salt fountain runs for after perturbation
 t_sf=my_max_time_post_pump*86400; %duration salt fountain is integrated after pump is turned off
 
 % run in two stages: pump on and pump off
-for ii=1:2 % ii=1, pump is on, ii=2, pump is off
+for ii = 1:1:3 % ii=1, pump is on, ii=2, pump is off
 
     ii;
     
@@ -151,6 +151,8 @@ for ii=1:2 % ii=1, pump is on, ii=2, pump is off
                % set to zero, and thus the vertical velocity will remain equal 
                % to its initial value which is given by the pump's vertical
                % velocity
+    elseif ii == 2 %stopped before continuing
+        do_pump = -1; %set to 0 if want to not have it pause 
     else %pump off 
         do_pump=0;
     end
@@ -161,11 +163,15 @@ for ii=1:2 % ii=1, pump is on, ii=2, pump is off
     % set initial conditions during pumping phase to be as measured in water column
     % at base of pipe
     if ii==1
-    tspan=[0 t_pump];
-    Z_o=z_b(Kg(1)); %initial vertial position of plug
-    W_o=w_pump; %initial vertical velocity of plug
-    T_o=T_b(Kg(1));  %inital temperature of plug
-    
+        tspan=[0 t_pump];
+        Z_o=z_b(Kg(1)); %initial vertial position of plug
+        W_o=w_pump; %initial vertical velocity of plug
+        T_o=T_b(Kg(1));  %inital temperature of plug
+    elseif ii == 2
+        tspan=[0 0.001];
+        Z_o=plug_var(end,1); 
+        W_o=plug_var(end,2);
+        T_o=plug_var(end,3);
     % plug var column 1 is depth, 2 is velocity, 3 is temperature 
     % sets initial conditions after pumping phase to be whatever it was after 
     % the last time step
@@ -199,9 +205,12 @@ for ii=1:2 % ii=1, pump is on, ii=2, pump is off
     if ii==1
         t_w_pump=t;
         plug_var_w_pump=plug_var;
+    elseif ii == 2
+        t_w_end_pump = cat(1, t_w_pump,t+t_w_pump(end));
+        plug_var_w_end_pump=cat(1, plug_var_w_pump,plug_var);
     else
-        t_total=cat(1,t_w_pump,t+t_w_pump(end));
-        plug_var_total=cat(1,plug_var_w_pump,plug_var);
+        t_total=cat(1,t_w_end_pump,t+t_w_end_pump(end));
+        plug_var_total=cat(1,plug_var_w_end_pump,plug_var);
     end
 
 end
@@ -233,10 +242,12 @@ grid on
 
 %plot pipe vs surroundings 
 %
+figure
 subplot(2,1,1)
 plot(t_total/86400,plug_var_total(:,3))
 hold on
-plotplot(t_total/86400,plug_var_total(:,4))
+plot(t_total/86400,plug_var_total(:,4))
+legend("plug temp", "water temp")
 xlabel('Time (in days)')
 ylabel('Temperature')
 hold off
