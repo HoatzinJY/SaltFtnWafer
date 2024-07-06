@@ -11,7 +11,7 @@ my_max_time_post_pump = 100; %days, to stop infinite recursion
 
 %start of normal file
 
-seawater_dir= ['\Users\jaime\Documents\ArtificialUpwelling\Wafer_Model\seawater'];
+seawater_dir= ['\Users\jaime\OneDrive\Desktop\Artificial Upwelling\SaltFtnsWafer\seawater'];
 path (path, seawater_dir);
 
 
@@ -20,11 +20,11 @@ path (path, seawater_dir);
 month=6;
 
 if month<10
-    fnameT='\Users\jaime\Documents\ArtificialUpwelling\WOA18\woa18_decav_t0month_01.nc';
-    fnameS='\Users\jaime\Documents\ArtificialUpwelling\WOA18\woa18_decav_s0month_01.nc';
+    fnameT='\Users\jaime\OneDrive\Desktop\Artificial Upwelling\SaltFtnsWafer\WOA18\woa18_decav_t0month_01.nc';
+    fnameS='\Users\jaime\OneDrive\Desktop\Artificial Upwelling\SaltFtnsWafer\WOA18\woa18_decav_s0month_01.nc';
 else
-    fnameT='\Users\jaime\Documents\ArtificialUpwelling\WOA18\woa18_decav_tmonth_01.nc';
-    fnameS='\Users\jaime\Documents\ArtificialUpwelling\WOA18\woa18_decav_s0month_01.nc';
+    fnameT='\Users\jaime\OneDrive\Desktop\Artificial Upwelling\SaltFtnsWafer\WOA18\woa18_decav_tmonth_01.nc';
+    fnameS='\Users\jaime\OneDrive\Desktop\Artificial Upwelling\SaltFtnsWafer\WOA18\woa18_decav_s0month_01.nc';
    
 end
 fnameT=strrep(fnameT,'month',int2str(month));
@@ -206,6 +206,16 @@ for ii=1:2 % ii=1, pump is on, ii=2, pump is off
 
 end
 
+%data stuff
+%sets col 4 of plug_var_total to be environment temperature
+plug_var_total(:, 4) = interp1(z_grd, T_grd, plug_var_total(:, 1));
+%sets col 5 to be enviroment salinity
+plug_var_total(:, 5) = interp1(z_grd, S_grd, plug_var_total(:, 1));
+%sets col 6 to be plug density - enviroment density (negative = will rise) 
+plug_var_total(:, 6) = (myBeta_s*(plug_salinity-plug_var_total(:, 5))-myAlpha_t*(plug_var_total(:, 3) - plug_var_total(:, 4)));
+
+
+
 %second set of plots of pipe conditions vs time (in days)
 %plug_var_total has column 1 is depth, 2 is velocity, 3 is temperature 
 figure
@@ -220,6 +230,23 @@ xlabel('Time (in days)')
 ylabel('Temperature (C)')
 grid on
 %changes some units from seconds to days 
+
+%plot pipe vs surroundings 
+%
+subplot(2,1,1)
+plot(t_total/86400,plug_var_total(:,3))
+hold on
+plot(t_total/86400,plug_var_total(:,4))
+legend("plug temp", "water temp")
+xlabel('Time (in days)')
+ylabel('Temperature')
+hold off
+grid on
+subplot(2,1,2)
+plot(t_total/86400,plug_var_total(:,6))
+xlabel('Time (in days)')
+ylabel('Density Parcel-surroundings')
+grid on
 
 %display important information about parcel end
 end_time = stop_time/86400 ;

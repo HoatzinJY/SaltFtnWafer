@@ -4,13 +4,14 @@
 
 %fasttrack paramters
 my_pipe_length = 200; %m
-my_pipe_radius = 0.5; %m
+my_pipe_radius = 1; %m
+my_distance_raised = 80; %m
 my_max_time_post_pump = 100; %days, to stop infinite recursion
-my_distance_raised = 10; %m
+
 
 %start of normal file
 
-seawater_dir= ['\Users\jaime\Documents\ArtificialUpwelling\Wafer_Model\seawater'];
+seawater_dir= ['\Users\jaime\OneDrive\Desktop\Artificial Upwelling\SaltFtnsWafer\seawater'];
 path (path, seawater_dir);
 
 
@@ -19,11 +20,11 @@ path (path, seawater_dir);
 month=6;
 
 if month<10
-    fnameT='\Users\jaime\Documents\ArtificialUpwelling\WOA18\woa18_decav_t0month_01.nc';
-    fnameS='\Users\jaime\Documents\ArtificialUpwelling\WOA18\woa18_decav_s0month_01.nc';
+    fnameT='\Users\jaime\OneDrive\Desktop\Artificial Upwelling\SaltFtnsWafer\WOA18\woa18_decav_t0month_01.nc';
+    fnameS='\Users\jaime\OneDrive\Desktop\Artificial Upwelling\SaltFtnsWafer\WOA18\woa18_decav_s0month_01.nc';
 else
-    fnameT='\Users\jaime\Documents\ArtificialUpwelling\WOA18\woa18_decav_tmonth_01.nc';
-    fnameS='\Users\jaime\Documents\ArtificialUpwelling\WOA18\woa18_decav_s0month_01.nc';
+    fnameT='\Users\jaime\OneDrive\Desktop\Artificial Upwelling\SaltFtnsWafer\WOA18\woa18_decav_tmonth_01.nc';
+    fnameS='\Users\jaime\OneDrive\Desktop\Artificial Upwelling\SaltFtnsWafer\WOA18\woa18_decav_s0month_01.nc';
    
 end
 fnameT=strrep(fnameT,'month',int2str(month));
@@ -140,8 +141,10 @@ for ii=1:2 % ii=1, pump is on, ii=2, pump is off
     Kg=find(z_grd>=z_mybot & z_grd<z_mytop);
     pres=sw_pres(-z_grd,lat_p);
     
-    alpha_t=mean(sw_alpha(S_grd(Kg),T_grd(Kg),pres(Kg),'temp'));
-    beta_s=mean(sw_beta(S_grd(Kg),T_grd(Kg),pres(Kg),'temp'));
+    myAlpha_t = mean(sw_alpha(S_grd(Kg),T_grd(Kg),pres(Kg),'temp'));
+    myBeta_s = mean(sw_beta(S_grd(Kg),T_grd(Kg),pres(Kg),'temp'));
+    alpha_t= myAlpha_t;
+    beta_s= myBeta_s;
     
     if ii==1 %pump on
     do_pump=1; %if do_pump=1, the RHS of the vertical velocity equation will be 
@@ -203,6 +206,16 @@ for ii=1:2 % ii=1, pump is on, ii=2, pump is off
 
 end
 
+%data stuff
+%sets col 4 of plug_var_total to be environment temperature
+plug_var_total(:, 4) = interp1(z_grd, T_grd, plug_var_total(:, 1));
+%sets col 5 to be enviroment salinity
+plug_var_total(:, 5) = interp1(z_grd, S_grd, plug_var_total(:, 1));
+%sets col 6 to be plug density - enviroment density (negative = will rise) 
+plug_var_total(:, 6) = (myBeta_s*(plug_salinity-plug_var_total(:, 5))-myAlpha_t*(plug_var_total(:, 3) - plug_var_total(:, 4)));
+
+
+
 %second set of plots of pipe conditions vs time (in days)
 %plug_var_total has column 1 is depth, 2 is velocity, 3 is temperature 
 figure
@@ -218,6 +231,22 @@ ylabel('Temperature (C)')
 grid on
 %changes some units from seconds to days 
 
+%plot pipe vs surroundings 
+%
+subplot(2,1,1)
+plot(t_total/86400,plug_var_total(:,3))
+hold on
+plotplot(t_total/86400,plug_var_total(:,4))
+xlabel('Time (in days)')
+ylabel('Temperature')
+hold off
+grid on
+subplot(2,1,2)
+plot(t_total/86400,plug_var_total(:,6))
+xlabel('Time (in days)')
+ylabel('Density Parcel-surroundings')
+grid on
+
 %display important information about parcel end
 end_time = stop_time/86400 ;
 end_time_display = strcat(num2str(end_time),' days to reach top after pump period');
@@ -225,11 +254,17 @@ end_velocity = stop_plug_var(2);
 end_velocity_display = strcat(num2str(end_velocity),' velocity in m/s at the top');
 end_temperature = stop_plug_var(3);
 end_enviroment_temp = interp1(z_grd, T_grd, z_mytop);
-end_temperature_display = strcat(num2str(end_temperature),' C in plug ', num2str(end_enviroment_temp), ' C in enviroment ', num2str(end_temp - end_enviroment_temp), ' C difference' );
+end_temperature_display = strcat(num2str(end_temperature),' C in plug ', num2str(end_enviroment_temp), ' C in enviroment ', num2str(end_temperature - end_enviroment_temp), ' C difference' );
 end_salinity = plug_salinity;
-end_enviroment_salinity = interpl(z_grd, S_grd, z_mytop);
-end_salinity_display = strcat(num2str(end_salinity),' ppt in plug ', num2str(end_enviroment_salinity), ' ppt in enviroment ', num2str(end_salinity - end_enviroment_salinity), ' C difference' );
-end_density_difference = (beta_s*(end_salinity-end_enviroment_salinity)-alpha_t*(end_temperature - end_enviroment_temp));
+end_enviroment_salinity = interp1(z_grd, S_grd, z_mytop);
+end_salinity_display = strcat(num2str(end_salinity),' ppt in plug ', num2str(end_enviroment_salinity), ' ppt in enviroment ', num2str(end_salinity - end_enviroment_salinity), ' ppt difference' );
+end_density_difference = (myBeta_s*(end_salinity-end_enviroment_salinity)-myAlpha_t*(end_temperature - end_enviroment_temp));
+end_density_display = strcat(num2str(end_density_difference), ' kg/m^3 density difference plug - surroundings');
+disp(end_time_display)
+disp(end_velocity_display)
+disp(end_temperature_display)
+disp(end_salinity_display)
+disp(end_density_display)
 
 
 
