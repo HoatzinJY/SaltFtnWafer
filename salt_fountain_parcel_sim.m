@@ -168,7 +168,7 @@ for ii = 1:1:3 % ii=1, pump is on, ii=2, pump is off
         W_o=w_pump; %initial vertical velocity of plug
         T_o=T_b(Kg(1));  %inital temperature of plug
     elseif ii == 2
-        tspan=[0 0.001];
+        tspan=[0 1]; %sits for 5 hrs to hopefully equalize;
         Z_o=plug_var(end,1); 
         W_o=plug_var(end,2);
         T_o=plug_var(end,3);
